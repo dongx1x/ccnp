@@ -21,11 +21,7 @@ pub mod ccnp_pb {
 use ccnp_pb::ccnp_server::CcnpServer;
 
 
-mod tee;
-use tee::get_available_tee;
-
 mod ccnp_service;
-mod handler;
 
 
 #[derive(Parser)]
@@ -53,16 +49,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let uds_stream = UnixListenerStream::new(uds);
     set_sock_perm()?;
 
-    let service =  get_available_tee().map_or_else(
-        || {
-            panic!("[ccnp-server]: Not found any TEE!") 
-        }, 
-        |available| {
-            ccnp_service::Service::new(available)
-        }
-    );
-    
-
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter
         .set_serving::<CcnpServer<ccnp_service::Service>>()
@@ -73,8 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .unwrap();
 
-    println!("Starting ccnp server in {:?} enviroment...", service.tee_name());
-
+   let service =  ccnp_service::Service::new();
     Server::builder()
         .add_service(reflection_service)
         .add_service(health_service)
