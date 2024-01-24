@@ -1,0 +1,31 @@
+backend: ima
+algorithm: sha384
+measure:
+  system:
+    parameter: true
+    version: ["kernel", "distro"]
+    processes:
+      - /usr/lib/systemd/systemd
+      - /usr/bin/containerd
+      - /usr/bin/kubelet
+      - /usr/bin/containerd-shim-runc-v2
+    configs:
+      - /etc/containerd/config.toml
+      - /etc/kubernetes/kubelet.conf
+  kubernetes:
+    parameter: true
+    version: ["kubeadm", "kubelet"]
+    configs:
+      - /etc/kubernetes/manifests/
+      - /etc/kubernetes/controller-manager.conf
+      - /etc/kubernetes/controller-manager.conf
+      - /etc/kubernetes/scheduler.conf
+    pods:
+      - kube-apiserver
+      - kube-scheduler
+      - kube-proxy
+      - kube-scheduler
+      - kube-controller-manager
+  container:
+    parameter: true
+    isolation: true

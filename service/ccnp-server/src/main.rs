@@ -12,17 +12,9 @@ use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 use simple_logger::SimpleLogger;
 
-pub mod ccnp_pb {
-    tonic::include_proto!("ccnp_server_pb");
-
-    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
-        tonic::include_file_descriptor_set!("ccnp_server_descriptor");
-}
-use ccnp_pb::ccnp_server::CcnpServer;
-
-
-mod ccnp_service;
-
+use ccnpServer::ccnp_pb::FILE_DESCRIPTOR_SET;
+use ccnpServer::ccnp_pb::ccnp_server::CcnpServer;
+use ccnpServer::service::Service;
 
 #[derive(Parser)]
 struct Cli {
@@ -51,15 +43,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter
-        .set_serving::<CcnpServer<ccnp_service::Service>>()
+        .set_serving::<CcnpServer<Service>>()
         .await;
 
     let reflection_service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(ccnp_pb::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
 
-   let service =  ccnp_service::Service::new();
+    let service = Service::new();
     Server::builder()
         .add_service(reflection_service)
         .add_service(health_service)
@@ -68,4 +60,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     Ok(())
 }
-

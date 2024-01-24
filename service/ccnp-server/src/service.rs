@@ -1,12 +1,10 @@
 
-use crate::{
-    ccnp_pb::{
-        ccnp_server::Ccnp, 
-        GetMeasurementRequest, GetMeasurementResponse,
-        GetEventlogRequest, GetEventlogResponse, 
-        GetReportRequest, GetReportResponse,
-        TcgEvent, TcgDigest
-    }
+use crate::ccnp_pb::{
+    ccnp_server::Ccnp, 
+    GetMeasurementRequest, GetMeasurementResponse,
+    GetEventlogRequest, GetEventlogResponse, 
+    GetReportRequest, GetReportResponse,
+    TcgEvent, TcgDigest
 };
 use std::result::Result::Ok;
 use anyhow::Result;
@@ -85,6 +83,9 @@ impl Ccnp for Service {
                         digest: event.digest.to_vec(), 
                         digests: vec![], 
                     })
+                }
+                EventLogEntry::TcgCanonicalEvent(event) => {
+                    todo!();
                 }
             }
         }
