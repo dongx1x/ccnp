@@ -2,26 +2,39 @@
 * Copyright (c) 2023, Intel Corporation. All rights reserved.<BR>
 * SPDX-License-Identifier: Apache-2.0
 */
+pub mod agent;
+pub mod container;
+pub mod measurement;
+pub mod policy;
+pub mod service;
+pub mod ccnp_pb {
+    tonic::include_proto!("ccnp_server_pb");
 
-use std::{fs, os::unix::fs::PermissionsExt};
+    pub const FILE_DESCRIPTOR_SET: &[u8] =
+        tonic::include_file_descriptor_set!("ccnp_server_descriptor");
+}
 
 use anyhow::Result;
 use clap::Parser;
+use simple_logger::SimpleLogger;
+use std::{fs, os::unix::fs::PermissionsExt};
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
-use simple_logger::SimpleLogger;
 
-use ccnpServer::ccnp_pb::FILE_DESCRIPTOR_SET;
-use ccnpServer::ccnp_pb::ccnp_server::CcnpServer;
-use ccnpServer::service::Service;
+use ccnp_pb::{ccnp_server::CcnpServer, FILE_DESCRIPTOR_SET};
+use measurement::Measurement;
+use policy::PolicyConfig;
+use service::Service;
 
 #[derive(Parser)]
 struct Cli {
-    port: String,
+    /// Input policy file
+    #[arg(short, long)]
+    policy: String,
 }
 
-const SOCK:&str = "/run/ccnp/uds/ccnp-server.sock";
+const SOCK: &str = "/run/ccnp/uds/ccnp-server.sock";
 
 fn set_sock_perm() -> Result<()> {
     let mut perms = fs::metadata(SOCK)?.permissions();
@@ -33,6 +46,11 @@ fn set_sock_perm() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     SimpleLogger::new().init()?;
+
+    let cli = Cli::parse();
+    let policy = PolicyConfig::new(cli.policy);
+    let m = Measurement::new(policy);
+
     let _ = std::fs::remove_file(SOCK);
     let uds = match UnixListener::bind(SOCK) {
         Ok(r) => r,
@@ -42,16 +60,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_sock_perm()?;
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
-    health_reporter
-        .set_serving::<CcnpServer<Service>>()
-        .await;
+    health_reporter.set_serving::<CcnpServer<Service>>().await;
 
     let reflection_service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
 
-    let service = Service::new();
+    let service = Service::new(m);
     Server::builder()
         .add_service(reflection_service)
         .add_service(health_service)

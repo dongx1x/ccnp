@@ -1,5 +1,5 @@
 [package]
-name = "ccnpServer"
+name = "ccnp_server"
 version = "0.1.0"
 edition = "2021"
 
@@ -32,6 +32,8 @@ regex = "1.10.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.30"
 sha1 = "0.10.6"
+openssl = "0.10.63"
+hex = "0.4.3"
 
 [dev-dependencies]
 tower = { version = "0.4", features = ["util"] }

@@ -1,25 +1,29 @@
-
-use crate::ccnp_pb::{
-    ccnp_server::Ccnp, 
-    GetMeasurementRequest, GetMeasurementResponse,
-    GetEventlogRequest, GetEventlogResponse, 
-    GetReportRequest, GetReportResponse,
-    TcgEvent, TcgDigest
-};
-use std::result::Result::Ok;
 use anyhow::Result;
-use cctrusted_base::{
-    api::CCTrustedApi, 
-    api_data::ExtraArgs, 
-    tcg::EventLogEntry
-};
-use cctrusted_vm::sdk::API;
-
+use lazy_static::lazy_static;
+use std::sync::Mutex;
 use tonic::{Request, Response, Status};
-pub struct Service;
 
+use crate::{
+    agent::Agent,
+    ccnp_pb::{
+        ccnp_server::Ccnp, GetEventlogRequest, GetEventlogResponse, GetMeasurementRequest,
+        GetMeasurementResponse, GetReportRequest, GetReportResponse,
+    },
+    measurement::Measurement,
+};
+
+lazy_static! {
+    static ref AGENT: Mutex<Agent> = Mutex::new(Agent {
+        measurement: None,
+        containers: None,
+        eventlogs: None,
+    });
+}
+
+pub struct Service;
 impl Service {
-    pub fn new() -> Self {
+    pub fn new(m: Measurement) -> Self {
+        AGENT.lock().unwrap().init(m);
         Service {}
     }
 }
@@ -31,84 +35,54 @@ impl Ccnp for Service {
         request: Request<GetMeasurementRequest>,
     ) -> Result<Response<GetMeasurementResponse>, Status> {
         let req = request.into_inner();
-        let res = API::get_cc_measurement(req.index.try_into().unwrap(), req.algo_id.try_into().unwrap())
-            .map_or_else(
-                |e|{
-                    Err(e)
-                }, 
-                |val|{
-                    Ok(val.get_hash())
-                }
-            ).unwrap();
+        let measurement =
+            match AGENT
+                .lock()
+                .unwrap()
+                .get_measurement(req.container_id, req.index, req.algo_id)
+            {
+                Ok(v) => v,
+                Err(e) => return Err(Status::internal(e.to_string())),
+            };
 
-        Ok(Response::new(GetMeasurementResponse{measurement: res}))
+        Ok(Response::new(GetMeasurementResponse { measurement }))
     }
-        
+
     async fn get_eventlog(
         &self,
         request: Request<GetEventlogRequest>,
     ) -> Result<Response<GetEventlogResponse>, Status> {
         let req = request.into_inner();
-        let mut eventlogs: Vec<TcgEvent> = vec![];
-        let entries = match API::get_cc_eventlog(Some(req.start), Some(req.count)) {
-            Ok(q) => q,
-            Err(e)  => return Err(Status::internal(e.to_string())),
-        };
+        let eventlogs =
+            match AGENT
+                .lock()
+                .unwrap()
+                .get_eventlog(req.container_id, req.start, req.count)
+            {
+                Ok(v) => v,
+                Err(e) => return Err(Status::internal(e.to_string())),
+            };
 
-        for entry in entries {
-            match entry {
-                EventLogEntry::TcgImrEvent(event) => {
-                    let mut digests: Vec<TcgDigest> = vec![]; 
-                    for d in event.digests {
-                        digests.push(TcgDigest{
-                            algo_id: d.algo_id as u32,
-                            hash: d.hash,
-                        })
-                    }
-                    eventlogs.push(TcgEvent{
-                        imr_index: event.imr_index,
-                        event_type: event.event_type,
-                        event_size: event.event_size,
-                        event: event.event,
-                        digest: vec![], 
-                        digests, 
-                    })
-                }
-                EventLogEntry::TcgPcClientImrEvent(event) => {
-                    eventlogs.push(TcgEvent{
-                        imr_index: event.imr_index,
-                        event_type: event.event_type,
-                        event_size: event.event_size,
-                        event: event.event,
-                        digest: event.digest.to_vec(), 
-                        digests: vec![], 
-                    })
-                }
-                EventLogEntry::TcgCanonicalEvent(event) => {
-                    todo!();
-                }
-            }
-        }
-
-        Ok(Response::new(GetEventlogResponse{events: eventlogs}))
+        Ok(Response::new(GetEventlogResponse { eventlogs }))
     }
 
-    async fn get_report(&self, request: Request<GetReportRequest>) -> Result<Response<GetReportResponse>, Status> {
+    async fn get_report(
+        &self,
+        request: Request<GetReportRequest>,
+    ) -> Result<Response<GetReportResponse>, Status> {
         let req = request.into_inner();
+        let report =
+            match AGENT
+                .lock()
+                .unwrap()
+                .get_report(req.container_id, req.nonce, req.user_data)
+            {
+                Ok(v) => v,
+                Err(e) => return Err(Status::internal(e.to_string())),
+            };
 
-        let res = API::get_cc_report(Some(req.nonce), Some(req.user_data), ExtraArgs {})
-        .map_or_else(
-            |e|{
-                Err(e)
-            }, 
-            |val|{
-                Ok(val.cc_report)
-            }
-        ).unwrap();
-
-        Ok(Response::new(GetReportResponse{report: res}))
+        Ok(Response::new(GetReportResponse { report }))
     }
-    
 }
 
 // todo: unit test

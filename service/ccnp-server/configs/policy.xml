@@ -2,7 +2,7 @@ backend: ima
 algorithm: sha384
 measure:
   system:
-    parameter: true
+    withParameter: true
     version: ["kernel", "distro"]
     processes:
       - /usr/lib/systemd/systemd
@@ -13,7 +13,7 @@ measure:
       - /etc/containerd/config.toml
       - /etc/kubernetes/kubelet.conf
   kubernetes:
-    parameter: true
+    withParameter: true
     version: ["kubeadm", "kubelet"]
     configs:
       - /etc/kubernetes/manifests/
@@ -27,5 +27,5 @@ measure:
       - kube-scheduler
       - kube-controller-manager
   container:
-    parameter: true
-    isolation: true
+    withParameter: true
+    isolated: true

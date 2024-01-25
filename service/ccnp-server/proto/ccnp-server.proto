@@ -22,8 +22,9 @@ service ccnp {
 }
 
 message GetReportRequest {
-    string user_data = 1;
-    string nonce = 2;
+    string container_id = 1;
+    string user_data = 2;
+    string nonce = 3;
 }
 
 message GetReportResponse {
@@ -31,8 +32,9 @@ message GetReportResponse {
 }
 
 message GetMeasurementRequest {
-    uint32 index = 1;
-    uint32 algo_id = 2;
+    string container_id = 1;
+    uint32 index = 2;
+    uint32 algo_id = 3;
 }
 
 message GetMeasurementResponse {
@@ -40,8 +42,9 @@ message GetMeasurementResponse {
 }
 
 message GetEventlogRequest {
-    uint32 start = 1;
-    uint32 count = 2;
+    string container_id = 1;
+    uint32 start = 2;
+    uint32 count = 3;
 }
 
 message TcgDigest {
@@ -49,17 +52,16 @@ message TcgDigest {
     bytes   hash = 2;
 }
 
-message TcgEvent {
+message TcgImrEvent {
     uint32  imr_index = 1;
     uint32  event_type = 2;
+    repeated TcgDigest digests = 3;
     uint32  event_size = 4;
     bytes   event = 5;
-    bytes   digest = 3;
-    repeated TcgDigest digests = 6;
 }
 
 message GetEventlogResponse {
-    repeated TcgEvent events = 1;
+    repeated TcgImrEvent eventlogs = 1;
 }
 
 

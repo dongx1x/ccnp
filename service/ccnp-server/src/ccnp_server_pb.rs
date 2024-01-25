@@ -59,8 +59,10 @@ pub mod health_check_response {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetReportRequest {
     #[prost(string, tag = "1")]
-    pub user_data: ::prost::alloc::string::String,
+    pub container_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
+    pub user_data: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
     pub nonce: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -72,9 +74,11 @@ pub struct GetReportResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetMeasurementRequest {
-    #[prost(uint32, tag = "1")]
-    pub index: u32,
+    #[prost(string, tag = "1")]
+    pub container_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "2")]
+    pub index: u32,
+    #[prost(uint32, tag = "3")]
     pub algo_id: u32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -86,9 +90,11 @@ pub struct GetMeasurementResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetEventlogRequest {
-    #[prost(uint32, tag = "1")]
-    pub start: u32,
+    #[prost(string, tag = "1")]
+    pub container_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "2")]
+    pub start: u32,
+    #[prost(uint32, tag = "3")]
     pub count: u32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -101,25 +107,23 @@ pub struct TcgDigest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TcgEvent {
+pub struct TcgImrEvent {
     #[prost(uint32, tag = "1")]
     pub imr_index: u32,
     #[prost(uint32, tag = "2")]
     pub event_type: u32,
+    #[prost(message, repeated, tag = "3")]
+    pub digests: ::prost::alloc::vec::Vec<TcgDigest>,
     #[prost(uint32, tag = "4")]
     pub event_size: u32,
     #[prost(bytes = "vec", tag = "5")]
     pub event: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
-    pub digest: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, repeated, tag = "6")]
-    pub digests: ::prost::alloc::vec::Vec<TcgDigest>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetEventlogResponse {
     #[prost(message, repeated, tag = "1")]
-    pub events: ::prost::alloc::vec::Vec<TcgEvent>,
+    pub eventlogs: ::prost::alloc::vec::Vec<TcgImrEvent>,
 }
 /// Generated client implementations.
 pub mod ccnp_client {
