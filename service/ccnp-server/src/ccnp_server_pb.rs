@@ -57,7 +57,25 @@ pub mod health_check_response {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetReportRequest {
+pub struct GetDefaultAlgorithmRequest {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetDefaultAlgorithmResponse {
+    #[prost(uint32, tag = "1")]
+    pub algo_id: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetMeasurementCountRequest {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetMeasurementCountResponse {
+    #[prost(uint32, tag = "1")]
+    pub count: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCcReportRequest {
     #[prost(string, tag = "1")]
     pub container_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
@@ -67,13 +85,15 @@ pub struct GetReportRequest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetReportResponse {
-    #[prost(bytes = "vec", tag = "1")]
-    pub report: ::prost::alloc::vec::Vec<u8>,
+pub struct GetCcReportResponse {
+    #[prost(uint32, tag = "1")]
+    pub cc_type: u32,
+    #[prost(bytes = "vec", tag = "2")]
+    pub cc_report: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetMeasurementRequest {
+pub struct GetCcMeasurementRequest {
     #[prost(string, tag = "1")]
     pub container_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "2")]
@@ -83,13 +103,13 @@ pub struct GetMeasurementRequest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetMeasurementResponse {
-    #[prost(bytes = "vec", tag = "1")]
-    pub measurement: ::prost::alloc::vec::Vec<u8>,
+pub struct GetCcMeasurementResponse {
+    #[prost(message, optional, tag = "1")]
+    pub measurement: ::core::option::Option<TcgDigest>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetEventlogRequest {
+pub struct GetCcEventlogRequest {
     #[prost(string, tag = "1")]
     pub container_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "2")]
@@ -112,18 +132,21 @@ pub struct TcgImrEvent {
     pub imr_index: u32,
     #[prost(uint32, tag = "2")]
     pub event_type: u32,
-    #[prost(message, repeated, tag = "3")]
+    /// Compatible with TcgPcClientImrEvent
+    #[prost(bytes = "vec", tag = "3")]
+    pub digest: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, repeated, tag = "4")]
     pub digests: ::prost::alloc::vec::Vec<TcgDigest>,
-    #[prost(uint32, tag = "4")]
+    #[prost(uint32, tag = "5")]
     pub event_size: u32,
-    #[prost(bytes = "vec", tag = "5")]
+    #[prost(bytes = "vec", tag = "6")]
     pub event: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetEventlogResponse {
+pub struct GetCcEventlogResponse {
     #[prost(message, repeated, tag = "1")]
-    pub eventlogs: ::prost::alloc::vec::Vec<TcgImrEvent>,
+    pub event_logs: ::prost::alloc::vec::Vec<TcgImrEvent>,
 }
 /// Generated client implementations.
 pub mod ccnp_client {
@@ -210,11 +233,11 @@ pub mod ccnp_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        pub async fn get_report(
+        pub async fn get_default_algorithm(
             &mut self,
-            request: impl tonic::IntoRequest<super::GetReportRequest>,
+            request: impl tonic::IntoRequest<super::GetDefaultAlgorithmRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetReportResponse>,
+            tonic::Response<super::GetDefaultAlgorithmResponse>,
             tonic::Status,
         > {
             self.inner
@@ -228,18 +251,18 @@ pub mod ccnp_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ccnp_server_pb.ccnp/GetReport",
+                "/ccnp_server_pb.ccnp/GetDefaultAlgorithm",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetReport"));
+                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetDefaultAlgorithm"));
             self.inner.unary(req, path, codec).await
         }
-        pub async fn get_measurement(
+        pub async fn get_measurement_count(
             &mut self,
-            request: impl tonic::IntoRequest<super::GetMeasurementRequest>,
+            request: impl tonic::IntoRequest<super::GetMeasurementCountRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetMeasurementResponse>,
+            tonic::Response<super::GetMeasurementCountResponse>,
             tonic::Status,
         > {
             self.inner
@@ -253,18 +276,18 @@ pub mod ccnp_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ccnp_server_pb.ccnp/GetMeasurement",
+                "/ccnp_server_pb.ccnp/GetMeasurementCount",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetMeasurement"));
+                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetMeasurementCount"));
             self.inner.unary(req, path, codec).await
         }
-        pub async fn get_eventlog(
+        pub async fn get_cc_report(
             &mut self,
-            request: impl tonic::IntoRequest<super::GetEventlogRequest>,
+            request: impl tonic::IntoRequest<super::GetCcReportRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetEventlogResponse>,
+            tonic::Response<super::GetCcReportResponse>,
             tonic::Status,
         > {
             self.inner
@@ -278,11 +301,61 @@ pub mod ccnp_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/ccnp_server_pb.ccnp/GetEventlog",
+                "/ccnp_server_pb.ccnp/GetCcReport",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetEventlog"));
+                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetCcReport"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_cc_measurement(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCcMeasurementRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCcMeasurementResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ccnp_server_pb.ccnp/GetCcMeasurement",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetCcMeasurement"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_cc_eventlog(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCcEventlogRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCcEventlogResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ccnp_server_pb.ccnp/GetCcEventlog",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("ccnp_server_pb.ccnp", "GetCcEventlog"));
             self.inner.unary(req, path, codec).await
         }
     }
@@ -294,25 +367,39 @@ pub mod ccnp_server {
     /// Generated trait containing gRPC methods that should be implemented for use with CcnpServer.
     #[async_trait]
     pub trait Ccnp: Send + Sync + 'static {
-        async fn get_report(
+        async fn get_default_algorithm(
             &self,
-            request: tonic::Request<super::GetReportRequest>,
+            request: tonic::Request<super::GetDefaultAlgorithmRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetReportResponse>,
+            tonic::Response<super::GetDefaultAlgorithmResponse>,
             tonic::Status,
         >;
-        async fn get_measurement(
+        async fn get_measurement_count(
             &self,
-            request: tonic::Request<super::GetMeasurementRequest>,
+            request: tonic::Request<super::GetMeasurementCountRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetMeasurementResponse>,
+            tonic::Response<super::GetMeasurementCountResponse>,
             tonic::Status,
         >;
-        async fn get_eventlog(
+        async fn get_cc_report(
             &self,
-            request: tonic::Request<super::GetEventlogRequest>,
+            request: tonic::Request<super::GetCcReportRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetEventlogResponse>,
+            tonic::Response<super::GetCcReportResponse>,
+            tonic::Status,
+        >;
+        async fn get_cc_measurement(
+            &self,
+            request: tonic::Request<super::GetCcMeasurementRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCcMeasurementResponse>,
+            tonic::Status,
+        >;
+        async fn get_cc_eventlog(
+            &self,
+            request: tonic::Request<super::GetCcEventlogRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCcEventlogResponse>,
             tonic::Status,
         >;
     }
@@ -395,67 +482,25 @@ pub mod ccnp_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ccnp_server_pb.ccnp/GetReport" => {
+                "/ccnp_server_pb.ccnp/GetDefaultAlgorithm" => {
                     #[allow(non_camel_case_types)]
-                    struct GetReportSvc<T: Ccnp>(pub Arc<T>);
-                    impl<T: Ccnp> tonic::server::UnaryService<super::GetReportRequest>
-                    for GetReportSvc<T> {
-                        type Response = super::GetReportResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::GetReportRequest>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move { (*inner).get_report(request).await };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = GetReportSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/ccnp_server_pb.ccnp/GetMeasurement" => {
-                    #[allow(non_camel_case_types)]
-                    struct GetMeasurementSvc<T: Ccnp>(pub Arc<T>);
+                    struct GetDefaultAlgorithmSvc<T: Ccnp>(pub Arc<T>);
                     impl<
                         T: Ccnp,
-                    > tonic::server::UnaryService<super::GetMeasurementRequest>
-                    for GetMeasurementSvc<T> {
-                        type Response = super::GetMeasurementResponse;
+                    > tonic::server::UnaryService<super::GetDefaultAlgorithmRequest>
+                    for GetDefaultAlgorithmSvc<T> {
+                        type Response = super::GetDefaultAlgorithmResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::GetMeasurementRequest>,
+                            request: tonic::Request<super::GetDefaultAlgorithmRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).get_measurement(request).await
+                                (*inner).get_default_algorithm(request).await
                             };
                             Box::pin(fut)
                         }
@@ -467,7 +512,7 @@ pub mod ccnp_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = GetMeasurementSvc(inner);
+                        let method = GetDefaultAlgorithmSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -483,23 +528,25 @@ pub mod ccnp_server {
                     };
                     Box::pin(fut)
                 }
-                "/ccnp_server_pb.ccnp/GetEventlog" => {
+                "/ccnp_server_pb.ccnp/GetMeasurementCount" => {
                     #[allow(non_camel_case_types)]
-                    struct GetEventlogSvc<T: Ccnp>(pub Arc<T>);
-                    impl<T: Ccnp> tonic::server::UnaryService<super::GetEventlogRequest>
-                    for GetEventlogSvc<T> {
-                        type Response = super::GetEventlogResponse;
+                    struct GetMeasurementCountSvc<T: Ccnp>(pub Arc<T>);
+                    impl<
+                        T: Ccnp,
+                    > tonic::server::UnaryService<super::GetMeasurementCountRequest>
+                    for GetMeasurementCountSvc<T> {
+                        type Response = super::GetMeasurementCountResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::GetEventlogRequest>,
+                            request: tonic::Request<super::GetMeasurementCountRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).get_eventlog(request).await
+                                (*inner).get_measurement_count(request).await
                             };
                             Box::pin(fut)
                         }
@@ -511,7 +558,143 @@ pub mod ccnp_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = GetEventlogSvc(inner);
+                        let method = GetMeasurementCountSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/ccnp_server_pb.ccnp/GetCcReport" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCcReportSvc<T: Ccnp>(pub Arc<T>);
+                    impl<T: Ccnp> tonic::server::UnaryService<super::GetCcReportRequest>
+                    for GetCcReportSvc<T> {
+                        type Response = super::GetCcReportResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCcReportRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).get_cc_report(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCcReportSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/ccnp_server_pb.ccnp/GetCcMeasurement" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCcMeasurementSvc<T: Ccnp>(pub Arc<T>);
+                    impl<
+                        T: Ccnp,
+                    > tonic::server::UnaryService<super::GetCcMeasurementRequest>
+                    for GetCcMeasurementSvc<T> {
+                        type Response = super::GetCcMeasurementResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCcMeasurementRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).get_cc_measurement(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCcMeasurementSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/ccnp_server_pb.ccnp/GetCcEventlog" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCcEventlogSvc<T: Ccnp>(pub Arc<T>);
+                    impl<
+                        T: Ccnp,
+                    > tonic::server::UnaryService<super::GetCcEventlogRequest>
+                    for GetCcEventlogSvc<T> {
+                        type Response = super::GetCcEventlogResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCcEventlogRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).get_cc_eventlog(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCcEventlogSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

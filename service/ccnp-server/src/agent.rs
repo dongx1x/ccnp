@@ -5,6 +5,7 @@ use cctrusted_base::{
     tcg::{EventLogEntry, IMA_MEASUREMENT_EVENT},
 };
 use cctrusted_vm::sdk::API;
+use log::info;
 use std::collections::HashMap;
 
 use crate::{
@@ -16,36 +17,48 @@ use crate::{
 pub struct Agent {
     pub measurement: Option<Measurement>,
     pub containers: Option<HashMap<String, Container>>,
-    pub eventlogs: Option<Vec<TcgImrEvent>>,
+    pub event_logs: Option<Vec<TcgImrEvent>>,
 }
 
 impl Agent {
-    pub fn init(&mut self, mut m: Measurement) {
+    pub fn init(&mut self, mut m: Measurement) -> Result<(), Error> {
         let _ = m.measure();
         self.measurement = Some(m);
         self.containers = Some(HashMap::new());
-        self.eventlogs = Some(vec![]);
-        let _ = self.get_all_eventlogs();
+        self.event_logs = Some(vec![]);
+        self.fetch_all_event_logs()
     }
 
-    pub fn get_all_eventlogs(&mut self) -> Result<(), Error> {
-        let start: u32 = match self
-            .eventlogs
-            .as_ref()
-            .expect("The eventlog is None.")
-            .len()
-        {
-            0 => 1,
-            1 => 2,
-            v => v as u32 - 1,
+    pub fn get_default_algorithm(&mut self) -> Result<u32, Error> {
+        let algo = match API::get_default_algorithm() {
+            Ok(q) => q,
+            Err(e) => return Err(e),
         };
+        Ok(algo.algo_id.into())
+    }
+
+    pub fn get_measurement_count(&mut self) -> Result<u32, Error> {
+        let count = match API::get_measurement_count() {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+
+        Ok(count.into())
+    }
+
+    pub fn fetch_all_event_logs(&mut self) -> Result<(), Error> {
+        let start: u32 = self
+            .event_logs
+            .as_ref()
+            .expect("The event_logs is None.")
+            .len() as u32;
 
         let entries = match API::get_cc_eventlog(Some(start), None) {
             Ok(q) => q,
             Err(e) => return Err(e),
         };
 
-        if entries.len() <= 2 {
+        if entries.len() == 0 {
             return Ok(());
         }
 
@@ -64,18 +77,19 @@ impl Agent {
                         event_type: event.event_type,
                         event_size: event.event_size,
                         event: event.event,
+                        digest:vec![],
                         digests,
                     };
                     if tcg_event.event_type == IMA_MEASUREMENT_EVENT {
                         self.filter_container(tcg_event.clone());
                     }
-                    self.eventlogs
+                    self.event_logs
                         .as_mut()
                         .expect("Change eventlog to mut failed.")
                         .push(tcg_event)
                 }
                 EventLogEntry::TcgPcClientImrEvent(event) => self
-                    .eventlogs
+                    .event_logs
                     .as_mut()
                     .expect("Change eventlog to mut failed.")
                     .push(TcgImrEvent {
@@ -83,6 +97,7 @@ impl Agent {
                         event_type: event.event_type,
                         event_size: event.event_size,
                         event: event.event,
+                        digest: event.digest.to_vec(), 
                         digests: vec![],
                     }),
                 EventLogEntry::TcgCanonicalEvent(_event) => {
@@ -90,6 +105,8 @@ impl Agent {
                 }
             }
         }
+        info!("Loaded {} event logs.", self.event_logs.as_ref().expect("Change eventlog to ref failed.").len());
+
         Ok(())
     }
 
@@ -101,7 +118,7 @@ impl Agent {
         if cgpath.len() != 4 {
             return;
         }
-        if cgpath[1].starts_with("/kubepods") || cgpath[1].starts_with("/system.slice/docker-") {
+        if cgpath[1].starts_with("/kubepods.slice/kubepods") || cgpath[1].starts_with("/system.slice/docker-") {
             let imr = match self.measurement.clone() {
                 Some(mut v) => v.get_imr(),
                 None => return,
@@ -114,12 +131,13 @@ impl Agent {
                 .expect("Container hashmap check failed.")
                 .contains_key(&id)
             {
+                container.set_imr(self.measurement.as_mut().unwrap().get_imr());
+                container.set_eventlogs(self.measurement.as_mut().unwrap().get_eventlogs());
                 container.extend_imr(event.clone());
                 self.containers
                     .as_mut()
                     .expect("Container hashmap insert failed.")
                     .insert(id.clone(), container);
-                println!("continer exist: {}", id.clone());
             } else {
                 let container = self
                     .containers
@@ -130,28 +148,32 @@ impl Agent {
                     .expect("Container is None.")
                     .extend_imr(event.clone());
             }
-            println!("continer: {}", id.clone());
         }
     }
 
-    pub fn get_eventlog(
+    pub fn get_cc_eventlog(
         &mut self,
         id: String,
         start: u32,
         count: u32,
     ) -> Result<Vec<TcgImrEvent>, Error> {
-        let _ = self.get_all_eventlogs();
-
+        let _ = self.fetch_all_event_logs();
+        let mut event_logs: Vec<TcgImrEvent> = vec![];
         let s: usize = start.try_into().unwrap();
         let mut e: usize = (start + count).try_into().unwrap();
-
-        if self
+        let container_isolated = self
             .measurement
             .clone()
             .expect("The Measuement is None.")
             .container_isolated()
-            .unwrap()
-        {
+            .unwrap();
+
+        if container_isolated {
+            for event_log in self.event_logs.as_ref().expect("The eventlog is None.") {
+                if event_log.imr_index == 0 || event_log.imr_index == 1 {
+                    event_logs.push(event_log.clone());
+                }
+            }
             if self
                 .containers
                 .as_ref()
@@ -163,41 +185,41 @@ impl Agent {
                     .as_mut()
                     .expect("Container hashmap get_mut failed.")
                     .get_mut(&id.clone());
-                let eventlogs = container.expect("Container is None.").get_eventlogs();
-                if s >= eventlogs.len() {
-                    return Err(anyhow!("Invalid input start. Start must be number larger than 0 and smaller than total event log count."));
+                let out_event_logs = [event_logs, container.expect("Container is None.").get_eventlogs()].concat();
+                if s >= out_event_logs.len() {
+                    return Err(anyhow!("Invalid input start. Start must be smaller than total event log count."));
                 }
-                if e >= eventlogs.len() {
-                    return Err(anyhow!("Invalid input count. count must be number larger than 0 and smaller than total event log count."));
+                if e >= out_event_logs.len() {
+                    return Err(anyhow!("Invalid input count. count must be smaller than total event log count."));
                 }
                 if e == 0 {
-                    e = eventlogs.len();
+                    e = out_event_logs.len();
                 }
-                return Ok(eventlogs[s..e].to_vec());
+                return Ok(out_event_logs[s..e].to_vec());
             } else {
                 return Err(anyhow!("Container cannot be found."));
             }
         }
-        let eventlogs = self.eventlogs.as_ref().expect("The eventlog is None.");
-        if s >= eventlogs.len() {
-            return Err(anyhow!("Invalid input start. Start must be number larger than 0 and smaller than total event log count."));
+        event_logs = self.event_logs.as_ref().expect("The eventlog is None.").to_vec();
+        if s >= event_logs.len() {
+            return Err(anyhow!("Invalid input start. Start must be smaller than total event log count."));
         }
-        if e >= eventlogs.len() {
-            return Err(anyhow!("Invalid input count. count must be number larger than 0 and smaller than total event log count."));
+        if e >= event_logs.len() {
+            return Err(anyhow!("Invalid input count. count must be smaller than total event log count."));
         }
         if e == 0 {
-            e = eventlogs.len();
+            e = event_logs.len();
         }
-        Ok(eventlogs[s..e].to_vec())
+        Ok(event_logs[s..e].to_vec())
     }
 
-    pub fn get_report(
+    pub fn get_cc_report(
         &mut self,
         id: String,
         nonce: String,
         user_data: String,
-    ) -> Result<Vec<u8>, Error> {
-        let _ = self.get_all_eventlogs();
+    ) -> Result<(Vec<u8>, u32), Error> {
+        let _ = self.fetch_all_event_logs();
         let mut new_nonce = nonce.clone();
 
         if self
@@ -238,26 +260,31 @@ impl Agent {
             }
         }
 
-        let report = API::get_cc_report(Some(new_nonce), Some(user_data), ExtraArgs {})
-            .map_or_else(Err, |val| Ok(val.cc_report))
+        let (report, cc_type) = API::get_cc_report(Some(new_nonce), Some(user_data), ExtraArgs {})
+            .map_or_else(Err, |val| Ok((val.cc_report, val.cc_type as u32)))
             .unwrap();
-        Ok(report)
+        Ok((report, cc_type))
     }
 
-    pub fn get_measurement(
+    pub fn get_cc_measurement(
         &mut self,
         id: String,
         index: u32,
         algo_id: u32,
-    ) -> Result<Vec<u8>, Error> {
-        let _ = self.get_all_eventlogs();
-        if self
+    ) -> Result<TcgDigest, Error> {
+        let _ = self.fetch_all_event_logs();
+        let container_isolated = self
             .measurement
             .clone()
             .expect("The Measuement is None.")
             .container_isolated()
-            .unwrap()
-        {
+            .unwrap();
+
+        if index == 2 && container_isolated {
+            return Err(anyhow!("Cannot access IMR according to the policy."))
+        }
+
+        if index == 3 && container_isolated {
             if self
                 .containers
                 .as_ref()
@@ -269,14 +296,19 @@ impl Agent {
                     .as_mut()
                     .expect("Container hashmap get_mut failed.")
                     .get_mut(&id.clone());
-                return Ok(container.expect("Container is None.").get_imr().hash);
+                return Ok(container.expect("Container is None.").get_imr());
             } else {
                 return Err(anyhow!("Container cannot be found."));
             }
         }
         let measurement =
             API::get_cc_measurement(index.try_into().unwrap(), algo_id.try_into().unwrap())
-                .map_or_else(Err, |val| Ok(val.get_hash()))
+                .map_or_else(Err, |val| {
+                    Ok(TcgDigest {
+                        algo_id: val.algo_id.into(),
+                        hash: val.hash,
+                    })
+                })
                 .unwrap();
         Ok(measurement)
     }

@@ -56,17 +56,12 @@ function delete_ccnp {
     echo "-----------Delete ccnp NFD..."
     helm uninstall ccnp-device-plugin
 
-    echo "-----------Delete ccnp eventlog server..."
-    kubectl delete -f deployment/manifests/eventlog-server-deployment.yaml
+    echo "-----------Delete ccnp server..."
+    kubectl delete -f deployment/manifests/ccnp-server-deployment.yaml
 
-    echo "-----------Delete ccnp measurement server..."
-    kubectl delete -f deployment/manifests/measurement-server-deployment.yaml
-
-    echo "-----------Delete ccnp quote server..."
-    kubectl delete -f deployment/manifests/quote-server-deployment.yaml
-
-    echo "-----------Delete ccnp namespace..."
     kubectl delete -f deployment/manifests/namespace.yaml
+
+    kubectl delete namespace node-feature-discovery
     popd || exit
 }
 
@@ -101,14 +96,8 @@ function deploy_ccnp {
     echo "-----------Deploy ccnp namespace..."
     kubectl create -f temp_manifests/namespace.yaml
 
-    echo "-----------Deploy ccnp eventlog server..."
-    kubectl create -f temp_manifests/eventlog-server-deployment.yaml
-
-    echo "-----------Deploy ccnp measurement server..."
-    kubectl create -f temp_manifests/measurement-server-deployment.yaml
-
-    echo "-----------Deploy ccnp quote server..."
-    kubectl create -f temp_manifests/quote-server-deployment.yaml
+    echo "-----------Deploy ccnp server..."
+    kubectl create -f temp_manifests/ccnp-server-deployment.yaml
 
     # rm -rf temp_manifests
     popd || exit

@@ -16,7 +16,7 @@ pub mod ccnp_pb {
 
 use anyhow::Result;
 use clap::Parser;
-use simple_logger::SimpleLogger;
+use log::info;
 use std::{fs, os::unix::fs::PermissionsExt};
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
@@ -32,32 +32,36 @@ struct Cli {
     /// Input policy file
     #[arg(short, long)]
     policy: String,
+    /// UDS sock file
+    #[arg(short, long)]
+    #[clap(default_value="/run/ccnp/uds/ccnp-server.sock")]
+    sock: String,
 }
 
-const SOCK: &str = "/run/ccnp/uds/ccnp-server.sock";
-
-fn set_sock_perm() -> Result<()> {
-    let mut perms = fs::metadata(SOCK)?.permissions();
+fn set_sock_perm(sock: &str) -> Result<()> {
+    let mut perms = fs::metadata(sock)?.permissions();
     perms.set_mode(0o666);
-    fs::set_permissions(SOCK, perms)?;
+    fs::set_permissions(sock, perms)?;
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    SimpleLogger::new().init()?;
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let cli = Cli::parse();
+    let sock = cli.sock;
     let policy = PolicyConfig::new(cli.policy);
     let m = Measurement::new(policy);
 
-    let _ = std::fs::remove_file(SOCK);
-    let uds = match UnixListener::bind(SOCK) {
+    let _ = std::fs::remove_file(sock.clone());
+    let uds = match UnixListener::bind(sock.clone()) {
         Ok(r) => r,
         Err(e) => panic!("[ccnp-server]: bind UDS socket error: {:?}", e),
     };
     let uds_stream = UnixListenerStream::new(uds);
-    set_sock_perm()?;
+    info!("[ccnp-server]: set sock file permissions: {}", sock);
+    set_sock_perm(&sock.clone())?;
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter.set_serving::<CcnpServer<Service>>().await;
@@ -67,6 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .unwrap();
 
+    info!("[ccnp-server]: staring the service...");
     let service = Service::new(m);
     Server::builder()
         .add_service(reflection_service)

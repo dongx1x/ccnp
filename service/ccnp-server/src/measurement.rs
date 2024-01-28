@@ -46,16 +46,22 @@ impl Measurement {
         self.imr.clone()
     }
 
-    fn extend_imr(&mut self, val: &[u8]) -> Result<(), Error> {
-        let new_val = [self.imr.hash.clone(), val.to_vec()].concat();
+    pub fn get_eventlogs(&mut self) -> Vec<TcgImrEvent> {
+        self.eventlogs.clone()
+    }
+
+    fn extend_imr(&mut self, val: &[u8],) -> Result<(), Error> {
         let mut hasher = Hasher::new(self.imr.clone().into()).expect("Hasher initialzation failed");
+        hasher.update(&val).expect("Hasher update failed");
+        let val_hash = hasher.finish().expect("Hasher finish failed").to_vec();
+
+        let new_val = [self.imr.hash.clone(), val_hash.to_vec()].concat();
         hasher.update(&new_val).expect("Hasher update failed");
         self.imr.hash = hasher.finish().expect("Hasher finish failed").to_vec();
-        println!("new_hash: {}", hex::encode(self.imr.hash.clone()));
 
         let digests: Vec<TcgDigest> = vec![TcgDigest {
             algo_id: self.imr.algo_id,
-            hash: new_val,
+            hash: val_hash.to_vec(),
         }];
         let eventlog = TcgImrEvent {
             imr_index: 3,
@@ -63,6 +69,7 @@ impl Measurement {
             event_size: val.len().try_into().unwrap(),
             event: val.to_vec(),
             digests,
+            digest:vec![]
         };
 
         self.eventlogs.push(eventlog);
@@ -100,7 +107,6 @@ impl Measurement {
         for p in process_policy {
             if processes.contains_key(&p) {
                 let mut proc = p.clone();
-                println!("process: {}, {}", p, processes[&p]);
                 if self.policy.system_with_parameter() {
                     proc = format!("{}\0{}", p, processes[&p]);
                 }

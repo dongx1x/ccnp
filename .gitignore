@@ -17,3 +17,4 @@ tools/cvm-image-rewriter/pre-stage/07-install-mvp-guest/artifacts/*
 
 service/ccnp-server/target/
 service/ccnp-server/Cargo.lock
+service/ccnp-server/.cargo

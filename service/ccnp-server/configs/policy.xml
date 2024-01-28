@@ -5,7 +5,6 @@ measure:
     withParameter: true
     version: ["kernel", "distro"]
     processes:
-      - /usr/lib/systemd/systemd
       - /usr/bin/containerd
       - /usr/bin/kubelet
       - /usr/bin/containerd-shim-runc-v2
@@ -27,5 +26,4 @@ measure:
       - kube-scheduler
       - kube-controller-manager
   container:
-    withParameter: true
     isolated: true

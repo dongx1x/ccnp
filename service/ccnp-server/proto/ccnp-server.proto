@@ -16,32 +16,49 @@ message HealthCheckResponse {
 }
 
 service ccnp {
-    rpc GetReport (GetReportRequest) returns (GetReportResponse);
-    rpc GetMeasurement (GetMeasurementRequest) returns (GetMeasurementResponse) {}
-    rpc GetEventlog (GetEventlogRequest) returns (GetEventlogResponse) {}
+    rpc GetDefaultAlgorithm(GetDefaultAlgorithmRequest) returns (GetDefaultAlgorithmResponse);
+    rpc GetMeasurementCount(GetMeasurementCountRequest) returns (GetMeasurementCountResponse);
+    rpc GetCcReport (GetCcReportRequest) returns (GetCcReportResponse);
+    rpc GetCcMeasurement (GetCcMeasurementRequest) returns (GetCcMeasurementResponse) {}
+    rpc GetCcEventlog (GetCcEventlogRequest) returns (GetCcEventlogResponse) {}
 }
 
-message GetReportRequest {
+message GetDefaultAlgorithmRequest {
+}
+
+message GetDefaultAlgorithmResponse {
+    uint32 algo_id = 1;
+}
+
+message GetMeasurementCountRequest {
+}
+
+message GetMeasurementCountResponse {
+    uint32 count = 1;
+}
+
+message GetCcReportRequest {
     string container_id = 1;
     string user_data = 2;
     string nonce = 3;
 }
 
-message GetReportResponse {
-    bytes report = 1;
+message GetCcReportResponse {
+    uint32 cc_type = 1;
+    bytes cc_report = 2;
 }
 
-message GetMeasurementRequest {
+message GetCcMeasurementRequest {
     string container_id = 1;
     uint32 index = 2;
     uint32 algo_id = 3;
 }
 
-message GetMeasurementResponse {
-    bytes measurement = 1;
+message GetCcMeasurementResponse {
+    TcgDigest measurement = 1;
 }
 
-message GetEventlogRequest {
+message GetCcEventlogRequest {
     string container_id = 1;
     uint32 start = 2;
     uint32 count = 3;
@@ -55,14 +72,13 @@ message TcgDigest {
 message TcgImrEvent {
     uint32  imr_index = 1;
     uint32  event_type = 2;
-    repeated TcgDigest digests = 3;
-    uint32  event_size = 4;
-    bytes   event = 5;
+    // Compatible with TcgPcClientImrEvent
+    bytes digest = 3;
+    repeated TcgDigest digests = 4;
+    uint32  event_size = 5;
+    bytes   event = 6;
 }
 
-message GetEventlogResponse {
-    repeated TcgImrEvent eventlogs = 1;
+message GetCcEventlogResponse {
+    repeated TcgImrEvent event_logs = 1;
 }
-
-
-
